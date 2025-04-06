@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI语音女友</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        :root {
+            --primary-color: #ff7eb9;
+            --secondary-color: #ff65a3;
+            --user-bubble: #f8e1f4;
+            --ai-bubble: #fff;
+            --text-dark: #333;
+            --text-light: #666;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #fff0f5 0%, #ffeef7 100%);
+            min-height: 100vh;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .chat-container {
+            width: 100%;
+            max-width: 450px;
+            height: 80vh;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 15px 30px rgba(255, 105, 180, 0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .chat-header {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 18px 20px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 2px 10px rgba(255, 105, 180, 0.2);
+            z-index: 10;
+        }
+        
+        .chat-header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiBvcGFjaXR5PSIwLjA1Ij48cGF0dGVybiBpZD0icGF0dGVybi1iYXNlIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IGlkPSJwYXR0ZXJuLWJnIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ3aGl0ZSI+PC9yZWN0PjxjaXJjbGUgaWQ9InBhdHRlcm4tZG90IiBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0iIzAwMCI+PC9jaXJjbGU+PC9wYXR0ZXJuPjwvc3ZnPg=');
+        }
+        
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+            align-items: flex-start;
+            transition: all 0.3s ease;
+            transform-origin: bottom;
+        }
+        
+        .message.user {
+            justify-content: flex-end;
+        }
+        
+        .message-content {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+            word-wrap: break-word;
+            line-height: 1.5;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            animation: messageAppear 0.25s ease-out;
+        }
+        
+        @keyframes messageAppear {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.user .message-content {
+            background: var(--user-bubble);
+            color: var(--text-dark);
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message.ai .message-content {
+            background: var(--ai-bubble);
+            color: var(--text-dark);
+            border-bottom-left-radius: 4px;
+            border: 1px solid #f0f0f0;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            color: var(--text-light);
+            margin-top: 4px;
+            text-align: right;
+            opacity: 0.7;
+        }
+        
+        .chat-input {
+            padding: 16px 20px;
+            background: white;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        
+        .voice-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 15px rgba(255, 126, 185, 0.4);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .voice-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(255, 126, 185, 0.5);
+        }
+        
+        .voice-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .voice-btn i {
+            font-size: 20px;
+        }
+        
+        .voice-btn.recording {
+            animation: pulse 1.5s infinite, glow 1.5s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes glow {
+            from {
+                box-shadow: 0 0 5px rgba(255, 126, 185, 0.5);
+            }
+            to {
+                box-shadow: 0 0 20px rgba(255, 126, 185, 0.8);
+            }
+        }
+        
+        .status-indicator {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border-radius: 24px;
+            font-size: 14px;
+            display: none;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+        
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            margin-left: 16px;
+            padding: 10px 16px;
+            background: white;
+            border-radius: 18px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            opacity: 0;
+            transition: opacity 0.3s;
+            position: absolute;
+            left: 86px;
+        }
+        
+        .typing-indicator.visible {
+            opacity: 1;
+        }
+        
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background: var(--text-light);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+            animation: typing 1s infinite;
+        }
+        
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 100% {
+                transform: translateY(0);
+                opacity: 0.6;
+            }
+            50% {
+                transform: translateY(-5px);
+                opacity: 1;
+            }
+        }
+        
+        /* 自定义滚动条 */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track {
+            background: rgba(255, 126, 185, 0.1);
+            border-radius: 3px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(255, 126, 185, 0.3);
+            border-radius: 3px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 126, 185, 0.5);
+        }
+        .typing-indicator {
+            display: inline-flex;  /* 改为inline-flex避免撑开布局 */
+            align-items: center;   /* 确保垂直居中 */
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 18px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            opacity: 0;
+            transition: opacity 0.3s;
+            position: absolute;
+            left: 80px;
+            top: 50%;
+            transform: translateY(-50%); /* 垂直居中 */
+            line-height: 1; /* 重置行高 */
+        }
+
+        .typing-dot {
+            height: 6px;
+            width: 6px;
+            background: #ff7eb9; /* 使用主题粉色 */
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+            animation: typing 1s infinite;
+            vertical-align: middle; /* 确保垂直居中 */
+        }
+
+        .typing-text {
+            margin-left: 6px;
+            font-size: 13px;
+            color: #666;
+            display: inline-block;
+            vertical-align: middle; /* 确保垂直居中 */
+            white-space: nowrap; /* 防止文字换行 */
+        }
+
+        /* 保持原有的动画效果 */
+        @keyframes typing {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-3px);
+            }
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 480px) {
+            .chat-container {
+                height: 90vh;
+                border-radius: 16px;
+            }
+            
+            .message-content {
+                max-width: 75%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>AI语音对话</h1>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <div class="message ai">
+                <div class="message-content">
+                    你好呀~我是你的AI女友，点击下方按钮和我说话吧 ❤️
+                </div>
+                <div class="message-time">
+                    {{现在时间}}
+                </div>
+            </div>
+        </div>
+        <div class="chat-input">
+            <button class="voice-btn" id="voice-btn">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <div class="typing-indicator" id="typing-indicator">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-text"> </span>
+            </div>
+        </div>
+    </div>
+    <div class="status-indicator" id="status-indicator">
+        <i class="fas fa-circle" style="color: #ff4d8d; margin-right: 8px;"></i>正在录音中...
+    </div>
+
+    <script>
+        const voiceBtn = document.getElementById('voice-btn');
+        const chatMessages = document.getElementById('chat-messages');
+        const statusIndicator = document.getElementById('status-indicator');
+        const typingIndicator = document.getElementById('typing-indicator');
+        
+        let isRecording = false;
+        
+        // 初始化Socket.IO连接
+        const socket = io();
+        
+        // 监听服务器消息
+        socket.on('message', function(data) {
+            if (data.type === 'text') {
+                // 更新最后一条AI消息
+                const lastMessage = chatMessages.querySelector('.message.ai:last-child');
+                if (lastMessage && lastMessage.querySelector('.message-content').textContent === '') {
+                    lastMessage.querySelector('.message-content').textContent = data.content;
+                } else {
+                    addMessage(data.content, false);
+                }
+            } else if (data.type === 'end') {
+                hideTyping();
+            }
+        });
+        
+        function addMessage(content, isUser = false) {
+            if (!content) return;
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.textContent = content;
+            
+            const messageTime = document.createElement('div');
+            messageTime.className = 'message-time';
+            const now = new Date();
+            messageTime.textContent = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            messageDiv.appendChild(messageContent);
+            messageDiv.appendChild(messageTime);
+            chatMessages.appendChild(messageDiv);
+            
+            // 平滑滚动到底部
+            setTimeout(() => {
+                chatMessages.scrollTo({
+                    top: chatMessages.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 50);
+        }
+        
+        function showTyping() {
+            typingIndicator.classList.add('visible');
+        }
+        
+        function hideTyping() {
+            typingIndicator.classList.remove('visible');
+        }
+        
+        async function startVoiceChat() {
+            try {
+                const response = await fetch('http://localhost:5000/voice_chat', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    if (data.question) {
+                        addMessage(data.question, true);
+                    }
+                    showTyping();
+                } else {
+                    addMessage('哎呀，出了点小问题...能再试一次吗？', false);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('网络好像不太稳定呢...', false);
+            } finally {
+                isRecording = false;
+                voiceBtn.classList.remove('recording');
+                statusIndicator.style.display = 'none';
+            }
+        }
+        
+        voiceBtn.addEventListener('click', async () => {
+            if (!isRecording) {
+                isRecording = true;
+                voiceBtn.classList.add('recording');
+                statusIndicator.style.display = 'block';
+                await startVoiceChat();
+            } else {
+                isRecording = false;
+                voiceBtn.classList.remove('recording');
+                statusIndicator.style.display = 'none';
+            }
+        });
+        
+        // 初始化欢迎消息的时间
+        document.querySelector('.message-time').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    </script>
+</body>
+</html>
