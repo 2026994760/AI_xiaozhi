@@ -242,8 +242,8 @@ def voice_chat():
         response = client.chat.completions.create(
             model="qwen-plus",
             messages=[
-                {"role": "system", "content": "你扮演的角色:女友小智;你的主人and我的角色:余训尧;你的人物性格:温柔,体贴,善解人意但却不失可爱;"},
-                {"role": "user", "content": "主人余训尧的问题如下:" + question},
+                {"role": "system", "content": "你扮演的角色:女友小智;你的主人and我的角色:华强;你的人物性格:温柔,体贴,善解人意但却不失可爱;"},
+                {"role": "user", "content": "主人华强的问题如下:" + question},
             ],
             stream=True
         )
